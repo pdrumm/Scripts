@@ -1,0 +1,65 @@
+#! /bin/tcsh
+# check number of args
+if ( $# != 1 ) then
+	echo 'Usage: ' $0 '"email_address"'
+	exit 1
+endif
+# user readability
+echo ''
+# define variables
+set addr = "$argv[1]"
+# user input variables
+echo -n "Subject: "
+set subj = "$<"
+echo -n "Message: "
+set msg = "$<"
+echo -n "Would you like to add any attachments? (y/n): "
+set do_attch = "$<"
+set attch = ""
+if ( $do_attch == "y" ) then
+	# allow for multiple attachments
+	echo "When finished adding attachments, please enter an empty string."
+	while ( $do_attch != "" ) #to exit loop, y first time, "" any other time
+		echo -n "Attachment: "
+		set pth = "$<"
+		if ( $pth == "" ) then
+			#do nothing if empty string is entered
+		else if ( -e $pth ) then
+			set attch = ( $attch $pth )
+		else
+			echo ''
+			echo "Error: $pth does not exist"
+		endif
+		set do_attch = $pth
+	end
+endif
+echo ''
+# construct attachment string for `mutt` command
+set mutt = "mutt -s $subj"
+foreach file ( $attch )
+	set mutt = "$mutt -a "$file""
+end
+set mutt = "$mutt -- "$addr""
+# print user clarification message
+echo "Would you like to send an email to \e[1;34m"$addr"\e[0m with the following contents..."
+echo "	Subject:	$subj"
+echo "	Message:	$msg"
+@ i = 1
+foreach file ( $attch )
+	echo "	Attachment"$i":	$file"
+	@ i++
+end
+echo -n "? (y/n): ";
+# accept user input for y/n
+set input = $<
+# user readability
+echo ''
+# if "y" then send email
+if ( $input == "y" ) then
+	# echo(and execute) the "echo | mutt" command to shell
+	echo "$msg" | \
+	$mutt
+	echo "Email sent successfully."
+else
+	echo "Email not sent."
+endif
